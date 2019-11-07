@@ -10,7 +10,7 @@ Feel free to use it as a reference.
 This requires the below SDK:
 - mediasoup-client-android: https://github.com/haiyangwu/mediasoup-client-android
 
-The SDK is included (build for archs x86 and arm64)
+The SDK is included (built for archs x86 and arm64)
 
 ---
 
