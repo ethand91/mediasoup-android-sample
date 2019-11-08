@@ -130,6 +130,7 @@ public class EchoSocket extends WebSocketListener implements MessageObserver.Sub
 
 		try {
 			JSONObject jsonObject = new JSONObject(text);
+			Log.d(TAG, "onMessage text=" + text);
 
 			String action = jsonObject.getString("action");
 			notifyObservers(action, jsonObject);
@@ -217,6 +218,8 @@ public class EchoSocket extends WebSocketListener implements MessageObserver.Sub
 						// Acknowledgement received
 						mResponse = data;
 						mLatch.countDown();
+					} else {
+						Log.d(TAG, "Another event" + event);
 					}
 				};
 
