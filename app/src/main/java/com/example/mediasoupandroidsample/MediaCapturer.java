@@ -1,8 +1,6 @@
 package com.example.mediasoupandroidsample;
 
 import android.content.Context;
-import android.hardware.Camera;
-import android.nfc.Tag;
 import android.util.Log;
 
 import org.webrtc.AudioSource;
@@ -11,29 +9,27 @@ import org.webrtc.Camera1Enumerator;
 import org.webrtc.Camera2Enumerator;
 import org.webrtc.CameraEnumerator;
 import org.webrtc.CameraVideoCapturer;
-import org.webrtc.CapturerObserver;
 import org.webrtc.EglBase;
 import org.webrtc.MediaConstraints;
 import org.webrtc.MediaStream;
 import org.webrtc.PeerConnectionFactory;
 import org.webrtc.SurfaceTextureHelper;
 import org.webrtc.SurfaceViewRenderer;
-import org.webrtc.VideoFrame;
 import org.webrtc.VideoSource;
 import org.webrtc.VideoTrack;
 import org.webrtc.voiceengine.WebRtcAudioUtils;
 
-public class MediaCapturer {
+class MediaCapturer {
 	private static final String TAG = "MediaCapturer";
 
 	private static final String MEDIA_STREAM_ID = "ARDAMS";
 	private static final String VIDEO_TRACK_ID = "ARDAMSv0";
 	private static final String AUDIO_TRACK_ID = "ARDAMSa0";
 
-	private SurfaceViewRenderer mVideoView;
+	private final SurfaceViewRenderer mVideoView;
 	private CameraVideoCapturer mCameraVideoCapturer;
-	private PeerConnectionFactory mPeerConnectionFactory;
-	private MediaStream mMediaStream;
+	private final PeerConnectionFactory mPeerConnectionFactory;
+	private final MediaStream mMediaStream;
 
 	public MediaCapturer(SurfaceViewRenderer videoView, PeerConnectionFactory peerConnectionFactory) {
 		mVideoView = videoView;

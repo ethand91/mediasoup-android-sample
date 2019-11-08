@@ -1,8 +1,10 @@
 package com.example.mediasoupandroidsample;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -19,6 +21,7 @@ public class PermissionFragment extends Fragment {
 	private static final int CAMERA_MIC_PERMISSION = 2;
 
 	private PermissionCallback mPermissionCallback;
+	private Context mContext;
 
 	public static PermissionFragment newInstance() {
 		return new PermissionFragment();
@@ -31,12 +34,21 @@ public class PermissionFragment extends Fragment {
 	@Override
 	public void onCreate(@Nullable Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		Log.d(TAG, "onCreate");
 		setRetainInstance(true);
+	}
+
+	@Override
+	public void onAttach(@NonNull Context context) {
+		super.onAttach(context);
+		Log.d(TAG, "onAttach");
+		mContext = context;
 	}
 
 	@Override
 	public void onDetach() {
 		super.onDetach();
+		Log.d(TAG, "onDetach");
 		mPermissionCallback = null;
 	}
 
@@ -56,7 +68,7 @@ public class PermissionFragment extends Fragment {
 		}
 	}
 
-	public void checnCameraMicPermission() {
+	public void checkCameraMicPermission() {
 		if (isMicPermissionGranted() && isCameraPermissionGranted()) {
 			mPermissionCallback.onPermissionGranted();
 		} else {
@@ -93,7 +105,9 @@ public class PermissionFragment extends Fragment {
 	}
 
 	private boolean isCameraPermissionGranted() {
-		return ContextCompat.checkSelfPermission(Objects.requireNonNull(getActivity()), Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
+		boolean isNull = mContext == null;
+		Log.d(TAG, "TEST " + isNull);
+		return ContextCompat.checkSelfPermission(Objects.requireNonNull(mContext), Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED;
 	}
 
 	private boolean isMicPermissionGranted() {
