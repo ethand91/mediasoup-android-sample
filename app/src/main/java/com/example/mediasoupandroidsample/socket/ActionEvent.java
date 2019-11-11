@@ -21,10 +21,12 @@ public class ActionEvent {
 	public static final String CONNECT_WEBRTC_TRANSPORT = "connectWebRtcTransport";
 	// Send media to mediasoup
 	public static final String PRODUCE = "produce";
+	// newuser notification
 	public static final String NEW_USER = "newuser";
+	// newconsumer notification
 	public static final String NEW_CONSUMER = "newconsumer";
 
-	@StringDef({ OPEN, ROOM_RTP_CAPABILITIES, LOGIN_ROOM, CREATE_WEBRTC_TRANSPORT, CONNECT_WEBRTC_TRANSPORT, PRODUCE })
+	@StringDef({ OPEN, ROOM_RTP_CAPABILITIES, LOGIN_ROOM, CREATE_WEBRTC_TRANSPORT, CONNECT_WEBRTC_TRANSPORT, PRODUCE, NEW_USER, NEW_CONSUMER })
 	@Retention(RetentionPolicy.SOURCE)
 	public @interface Event {}
 }

@@ -5,26 +5,21 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 
+import com.example.mediasoupandroidsample.permission.PermissionFragment;
+import com.example.mediasoupandroidsample.request.Request;
+import com.example.mediasoupandroidsample.room.RoomClient;
 import com.example.mediasoupandroidsample.socket.ActionEvent;
 import com.example.mediasoupandroidsample.socket.EchoSocket;
 import com.example.mediasoupandroidsample.socket.MessageObserver;
 
-import org.json.JSONArray;
 import org.mediasoup.droid.Consumer;
 import org.mediasoup.droid.Device;
 import org.mediasoup.droid.Logger;
 import org.mediasoup.droid.MediasoupClient;
-import org.mediasoup.droid.Producer;
 
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.mediasoup.droid.RecvTransport;
-import org.mediasoup.droid.SendTransport;
-import org.mediasoup.droid.Transport;
-import org.webrtc.AudioTrack;
 import org.webrtc.EglBase;
-import org.webrtc.PeerConnectionFactory;
-import org.webrtc.RendererCommon;
 import org.webrtc.SurfaceViewRenderer;
 import org.webrtc.VideoTrack;
 
@@ -33,14 +28,10 @@ import java.util.concurrent.TimeUnit;
 public class MainActivity extends AppCompatActivity implements MessageObserver.Observer {
     private static final String TAG = "MainActivity";
 
-    private Device mDevice;
     private SurfaceViewRenderer mVideoView;
     private SurfaceViewRenderer mRemoteVideoView;
     private PermissionFragment mPermissionFragment;
-    private SendTransport mSendTransport;
-    private RecvTransport mRecvTransport;
-    private MediaCapturer mMediaCapturer;
-    private EchoSocket mSocket;
+    private RoomClient mClient;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,24 +43,7 @@ public class MainActivity extends AppCompatActivity implements MessageObserver.O
         mRemoteVideoView = findViewById(R.id.remote_video_view);
 
 	    EglBase.Context eglBaseContext = EglBase.create().getEglBaseContext();
-	    runOnUiThread(new Runnable() {
-		    @Override
-		    public void run() {
-			    mRemoteVideoView.init(eglBaseContext, new RendererCommon.RendererEvents() {
-				    @Override
-				    public void onFirstFrameRendered() {
-					    Log.d(TAG, "remote::onFirstFrameRendered");
-				    }
-
-				    @Override
-				    public void onFrameResolutionChanged(int width, int height, int i2) {
-					    Log.d(TAG, "remote::onFrameResolutionChanged width=" + width + " height=" + height + " i2=" + i2);
-				    }
-			    });
-		    }
-	    });
-
-	    mRemoteVideoView.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT);
+	    runOnUiThread(() -> mRemoteVideoView.init(eglBaseContext, null));
 
         addPermissionFragment();
         // FIX: race problem, asking for permissions before fragment is full attached..
@@ -80,68 +54,47 @@ public class MainActivity extends AppCompatActivity implements MessageObserver.O
     }
 
     private void connectWebSocket() {
-        mSocket = new EchoSocket();
-        mSocket.register(this);
+        EchoSocket socket = new EchoSocket();
+        socket.register(this);
 
         try {
             // Connect to server
-            mSocket.connect("wss://192.168.60.99:443").get(3000, TimeUnit.SECONDS);
+            socket.connect("wss://192.168.60.99:443").get(3000, TimeUnit.SECONDS);
 
             // Initialize mediasoup client
             initializeMediasoupClient();
 
             // Get router rtp capabilities
-            JSONObject request = new JSONObject();
-            request.put("action", "getRoomRtpCapabilities");
-            request.put("roomId", "android");
-            JSONObject response = mSocket.sendWithFuture(request).get(3000, TimeUnit.SECONDS);
-            Log.d(TAG, "Got router rtp response " + response);
-            JSONObject roomRtpCapabilities = response.getJSONObject("roomRtpCapabilities");
+            JSONObject getRoomRtpCapabilitiesResponse = Request.sendGetRoomRtpCapabilitiesRequest(socket, "android");
+            JSONObject roomRtpCapabilities = getRoomRtpCapabilitiesResponse.getJSONObject("roomRtpCapabilities");
 
             // Initialize mediasoup device
-            mDevice = new Device();
-            mDevice.load(roomRtpCapabilities.toString());
-            Log.d(TAG, "Device loaded" + mDevice.isLoaded());
-            Log.d(TAG, "Device parameters = " + mDevice.getRtpCapabilities());
+            Device device = new Device();
+            device.load(roomRtpCapabilities.toString());
+
+            // Create a new room client
+            mClient = new RoomClient(socket, device, "android");
 
             // Join the room
-            JSONObject loginRequest = new JSONObject();
-            loginRequest.put("action", "loginRoom");
-            loginRequest.put("roomId", "android");
-            loginRequest.put("rtpCapabilities", new JSONObject(mDevice.getRtpCapabilities()));
+	        mClient.join();
 
-            JSONObject loginResponse = mSocket.sendWithFuture(loginRequest).get(3000, TimeUnit.SECONDS);
-            Log.d(TAG, "loginResponse " + loginResponse);
+	        // Create send WebRtcTransport
+	        mClient.createSendTransport();
 
-            // Create Send WebRtcTransport
-            JSONObject createSendWebRtcTransportRequest = new JSONObject();
-            createSendWebRtcTransportRequest.put("roomId", "android");
-            createSendWebRtcTransportRequest.put("action", "createWebRtcTransport");
-            createSendWebRtcTransportRequest.put("direction", "send");
+	        // Produce local media
+	        displayLocalVideo();
 
-            JSONObject createSendWebRtcTransportResponse = mSocket.sendWithFuture(createSendWebRtcTransportRequest).get(3000, TimeUnit.SECONDS);
-            Log.d(TAG, "createSendWebRtcTransportResponse " + createSendWebRtcTransportResponse);
-
-            // Create local send webRtc transport
-            createLocalWebRtcSendTransport(createSendWebRtcTransportResponse.getJSONObject("webRtcTransportData"));
-
-            // Create Recv WebRtcTransport
-	        JSONObject createRecvWebRtcTransportRequest = new JSONObject();
-	        createRecvWebRtcTransportRequest.put("action", "createWebRtcTransport");
-	        createRecvWebRtcTransportRequest.put("roomId", "android");
-	        createRecvWebRtcTransportRequest.put("direction", "recv");
-
-	        JSONObject createRecvWebRtcTransportResponse = mSocket.sendWithFuture(createRecvWebRtcTransportRequest).get(3000, TimeUnit.SECONDS);
-	        Log.d(TAG, "createRecvWebRtcTransportResponse " + createRecvWebRtcTransportResponse);
-
-	        // Create local recv webRtcTransport
-	        createLocalWebRtcRecvTransport(createRecvWebRtcTransportResponse.getJSONObject("webRtcTransportData"));
+	        // Create recv WebRtcTransport
+	        mClient.createRecvTransport();
         } catch (Exception e) {
             Log.e(TAG, "Failed to connect to socket server error=", e);
         }
     }
 
-    private void initializeMediasoupClient() {
+	/**
+	 * Initialize Mediasoup Client
+	 */
+	private void initializeMediasoupClient() {
         MediasoupClient.initialize(getApplicationContext());
         Log.d(TAG, "Mediasoup client initialized");
 
@@ -150,141 +103,20 @@ public class MainActivity extends AppCompatActivity implements MessageObserver.O
         Logger.setDefaultHandler();
     }
 
-    private void createLocalWebRtcSendTransport(JSONObject webRtcTransportData)
-    throws JSONException {
-        String id = webRtcTransportData.getString("id");
-        String iceParameters = webRtcTransportData.getJSONObject("iceParameters").toString();
-        JSONArray iceCandidatesArray = webRtcTransportData.getJSONArray("iceCandidates");
-        String dtlsParametersString = webRtcTransportData.getJSONObject("dtlsParameters").toString();
-
-        final SendTransport.Listener listener = new SendTransport.Listener() {
-            @Override
-            public String onProduce(Transport transport, String kind, String rtpParameters, String s2) {
-                return handleSendTransportProduceEvent(transport, kind, rtpParameters, s2);
-            }
-
-            @Override
-            public void onConnect(Transport transport, String dtlsParameters) {
-                handleLocalTransportConnectEvent(transport, dtlsParameters, "send");
-            }
-
-            @Override
-            public void onConnectionStateChange(Transport transport, String s) {
-                Log.d(TAG, "sendTransport::onConnectionStateChange newState=" + s);
-            }
-        };
-
-        mSendTransport = mDevice.createSendTransport(listener, id, iceParameters, iceCandidatesArray.toString(), dtlsParametersString);
-        Log.d(TAG, "sendTransport created " + mSendTransport.getId());
-
-        displayLocalVideo();
-    }
-
-    private void createLocalWebRtcRecvTransport (JSONObject webRtcTransportData)
-    throws JSONException {
-	    String id = webRtcTransportData.getString("id");
-	    String iceParameters = webRtcTransportData.getJSONObject("iceParameters").toString();
-	    JSONArray iceCandidatesArray = webRtcTransportData.getJSONArray("iceCandidates");
-	    String dtlsParametersString = webRtcTransportData.getJSONObject("dtlsParameters").toString();
-
-	    final RecvTransport.Listener listener = new RecvTransport.Listener() {
-		    @Override
-		    public void onConnect(Transport transport, String dtlsParameters) {
-		    	Log.d(TAG, "recvTransport::onConnect");
-		    	runOnUiThread(() -> {
-				    // Below wont work unless ui thread?
-				    handleLocalTransportConnectEvent(transport, dtlsParameters, "recv");
-			    });
-		    }
-
-		    @Override
-		    public void onConnectionStateChange(Transport transport, String s) {
-			    Log.d(TAG, "recvTransport::onConnectionStateChange state=" + s);
-		    }
-	    };
-
-	    mRecvTransport = mDevice.createRecvTransport(listener, id, iceParameters, iceCandidatesArray.toString(), dtlsParametersString);
-	    Log.d(TAG, "RecvTransport created id=" + mRecvTransport.getId());
-    }
-
-    private void handleLocalTransportConnectEvent(Transport transport, String dtlsParameters, String direction) {
-	    Log.d(TAG, "handleLocalTransportConnectEvent dtlsParameters=" + dtlsParameters);
-
-	    try {
-		    JSONObject connectTransportRequest = new JSONObject();
-		    connectTransportRequest.put("action", "connectWebRtcTransport");
-		    connectTransportRequest.put("roomId", "android");
-		    connectTransportRequest.put("transportId", transport.getId());
-		    connectTransportRequest.put("dtlsParameters", new JSONObject(dtlsParameters));
-			Log.d(TAG, "connectRequest " + connectTransportRequest);
-
-		    try {
-			    JSONObject connectTransportResponse = mSocket.sendWithFuture(connectTransportRequest).get(3000, TimeUnit.SECONDS);
-			    Log.d(TAG, "connect webrtc transport response" + connectTransportResponse);
-		    } catch (Exception e) {
-			    Log.e(TAG, "Failed to connect local transport with remote", e);
-		    }
-	    } catch (JSONException je) {
-		    Log.e(TAG, "Failed to send connect transport request", je);
-	    }
-    }
-
-    private String handleSendTransportProduceEvent(Transport transport, String kind, String rtpParameters, String s2) {
-	    Log.d(TAG, "handleSendTransportProduceEvent kind=" + kind + " rtpParameters=" + rtpParameters + " s2=" + s2);
-
-	    try {
-		    JSONObject produceRequest = new JSONObject();
-		    produceRequest.put("action", "produce");
-		    produceRequest.put("roomId", "android");
-		    produceRequest.put("transportId", transport.getId());
-		    produceRequest.put("kind", kind);
-		    produceRequest.put("rtpParameters", new JSONObject(rtpParameters));
-
-		    JSONObject produceResponse = mSocket.sendWithFuture(produceRequest).get(3000, TimeUnit.SECONDS);
-		    Log.d(TAG, "Got produce response " + produceResponse);
-
-		    return produceResponse.getString("producerId");
-	    } catch (JSONException je) {
-		    Log.e(TAG, "Failed to send produce request", je);
-		    return null;
-	    } catch (Exception e) {
-		    Log.e(TAG, "Failed to get producer response", e);
-		    return null;
-	    }
-    }
-
-    private void displayLocalVideo () {
-        Log.d(TAG, "displayLocalVideo");
-
+	/**
+	 * Capture and start producing local video/audio
+	 */
+	private void displayLocalVideo () {
         mPermissionFragment.setPermissionCallback(new PermissionFragment.PermissionCallback() {
             @Override
             public void onPermissionGranted() {
-                Log.d(TAG, "Got camera/mic permissions");
-                if (mMediaCapturer == null) {
-                    PeerConnectionFactory peerConnectionFactory = PeerConnectionFactory.builder().createPeerConnectionFactory();
-                    mMediaCapturer = new MediaCapturer(mVideoView, peerConnectionFactory);
-                }
-
                 try {
-                    EglBase.Context context = mMediaCapturer.initCamera(getBaseContext());
+                    EglBase.Context context = EglBase.create().getEglBaseContext();
                     runOnUiThread(() -> mVideoView.init(context, null));
 
-                    VideoTrack videoTrack = mMediaCapturer.createVideoTrack(getBaseContext(), context);
-                    AudioTrack audioTrack = mMediaCapturer.createAudioTrack();
-                    Log.d(TAG, "Got video track");
+                    mClient.produceAudio();
+                    mClient.produceVideo(getBaseContext(), mVideoView, context);
                     mVideoView.bringToFront();
-
-                    Producer.Listener listener = producer -> Log.d(TAG, "producer::onTransportClose");
-
-                    try {
-                        Producer videoProducer = mSendTransport.produce(listener, videoTrack, null, null);
-                        Log.d(TAG, "Created video producer id=" + videoProducer.getId());
-
-                        Producer audioProducer = mSendTransport.produce(listener, audioTrack, null, null);
-                        Log.d(TAG, "created audio producer id=" + audioProducer.getId());
-                    } catch (Exception e) {
-                        Log.e(TAG, "Failed to produce", e);
-                    }
                 } catch (Exception e) {
                     Log.e(TAG, "Failed to initialize local stream e=" + e.getLocalizedMessage());
                 }
@@ -299,19 +131,19 @@ public class MainActivity extends AppCompatActivity implements MessageObserver.O
         mPermissionFragment.checkCameraMicPermission();
     }
 
-    private void addPermissionFragment() {
+	/**
+	 * Add Permission Headless Fragment
+	 */
+	private void addPermissionFragment() {
         mPermissionFragment = (PermissionFragment) getSupportFragmentManager().findFragmentByTag(PermissionFragment.TAG);
 
         if(mPermissionFragment == null) {
-            Log.d(TAG, "create headless fragment");
             mPermissionFragment = PermissionFragment.newInstance();
             getSupportFragmentManager()
                     .beginTransaction()
                     .add(mPermissionFragment, PermissionFragment.TAG)
                     .commit();
         }
-
-        Log.d(TAG, "Fragment added");
     }
 
 	@Override
@@ -342,29 +174,22 @@ public class MainActivity extends AppCompatActivity implements MessageObserver.O
 		}
 	}
 
-	private void handleNewConsumerEvent(JSONObject consumerInfo)
-	throws JSONException {
-    	if (mRecvTransport == null) {
-    		Log.w(TAG, "RecvTransport is not created...");
-    		return;
+	/**
+	 * Handle remote newconsumer event
+	 * @param consumerInfo ConsumerInfo
+	 */
+	private void handleNewConsumerEvent(JSONObject consumerInfo) {
+    	try {
+		    Consumer kindConsumer = mClient.consumeTrack(consumerInfo);
+
+		    // If the remote consumer is video attach to the remote video renderer
+		    if (kindConsumer.getKind().equals("video")) {
+			    VideoTrack videoTrack = (VideoTrack) kindConsumer.getTrack();
+			    videoTrack.setEnabled(true);
+			    videoTrack.addSink(mRemoteVideoView);
+		    }
+	    } catch (Exception e) {
+    		Log.e(TAG, "Failed to consume remote track");
 	    }
-    	
-    	String consumerId = consumerInfo.getString("id");
-    	String producerId = consumerInfo.getString("producerId");
-    	String kind = consumerInfo.getString("kind");
-    	JSONObject rtpParameters = consumerInfo.getJSONObject("rtpParameters");
-
-    	final Consumer.Listener listener = consumer -> Log.d(TAG, "Consumer::onTransportClosed");
-
-		Consumer kindConsumer = mRecvTransport.consume(listener, consumerId, producerId, kind, rtpParameters.toString());
-		Log.d(TAG, "handleNewConsumerEvent() consumer created id=" + kindConsumer.getId() + " kind=" + kindConsumer.getKind());
-
-		if (kindConsumer.getKind().equals("video")) {
-			VideoTrack videoTrack = (VideoTrack) kindConsumer.getTrack();
-
-			videoTrack.setEnabled(true);
-			videoTrack.addSink(mRemoteVideoView);
-			Log.d(TAG, "Remote video track sink set " + kindConsumer.getId());
-		}
     }
 }

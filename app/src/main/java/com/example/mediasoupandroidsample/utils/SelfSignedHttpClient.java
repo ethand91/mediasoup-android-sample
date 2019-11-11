@@ -9,6 +9,9 @@ import javax.net.ssl.X509TrustManager;
 
 import okhttp3.OkHttpClient;
 
+/**
+ * Util class to allow self signed certificates (WARNING: DO NOT USE IN PRODUCTION!!)
+ */
 public class SelfSignedHttpClient {
 	public static OkHttpClient getSelfSignedHttpClient() {
 		try {
