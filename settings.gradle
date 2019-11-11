@@ -1,2 +1,2 @@
-include ':app', ':mediasoup-client-debug', ':libwebrtc'
+include ':app', ':mediasoup-client-debug'
 rootProject.name='Mediasoup AndroidSample'

@@ -24,6 +24,7 @@ import org.mediasoup.droid.Transport;
 import org.webrtc.AudioTrack;
 import org.webrtc.EglBase;
 import org.webrtc.PeerConnectionFactory;
+import org.webrtc.RendererCommon;
 import org.webrtc.SurfaceViewRenderer;
 import org.webrtc.VideoTrack;
 
@@ -49,6 +50,26 @@ public class MainActivity extends AppCompatActivity implements MessageObserver.O
         // Initialize Mediasoup
         mVideoView = findViewById(R.id.local_video_view);
         mRemoteVideoView = findViewById(R.id.remote_video_view);
+
+	    EglBase.Context eglBaseContext = EglBase.create().getEglBaseContext();
+	    runOnUiThread(new Runnable() {
+		    @Override
+		    public void run() {
+			    mRemoteVideoView.init(eglBaseContext, new RendererCommon.RendererEvents() {
+				    @Override
+				    public void onFirstFrameRendered() {
+					    Log.d(TAG, "remote::onFirstFrameRendered");
+				    }
+
+				    @Override
+				    public void onFrameResolutionChanged(int width, int height, int i2) {
+					    Log.d(TAG, "remote::onFrameResolutionChanged width=" + width + " height=" + height + " i2=" + i2);
+				    }
+			    });
+		    }
+	    });
+
+	    mRemoteVideoView.setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT);
 
         addPermissionFragment();
         // FIX: race problem, asking for permissions before fragment is full attached..
@@ -81,13 +102,13 @@ public class MainActivity extends AppCompatActivity implements MessageObserver.O
             mDevice = new Device();
             mDevice.load(roomRtpCapabilities.toString());
             Log.d(TAG, "Device loaded" + mDevice.isLoaded());
-            Log.d(TAG, "Device parameters = " + mDevice.GetRtpCapabilities());
+            Log.d(TAG, "Device parameters = " + mDevice.getRtpCapabilities());
 
             // Join the room
             JSONObject loginRequest = new JSONObject();
             loginRequest.put("action", "loginRoom");
             loginRequest.put("roomId", "android");
-            loginRequest.put("rtpCapabilities", new JSONObject(mDevice.GetRtpCapabilities()));
+            loginRequest.put("rtpCapabilities", new JSONObject(mDevice.getRtpCapabilities()));
 
             JSONObject loginResponse = mSocket.sendWithFuture(loginRequest).get(3000, TimeUnit.SECONDS);
             Log.d(TAG, "loginResponse " + loginResponse);
@@ -327,7 +348,7 @@ public class MainActivity extends AppCompatActivity implements MessageObserver.O
     		Log.w(TAG, "RecvTransport is not created...");
     		return;
 	    }
-
+    	
     	String consumerId = consumerInfo.getString("id");
     	String producerId = consumerInfo.getString("producerId");
     	String kind = consumerInfo.getString("kind");
@@ -337,5 +358,13 @@ public class MainActivity extends AppCompatActivity implements MessageObserver.O
 
 		Consumer kindConsumer = mRecvTransport.consume(listener, consumerId, producerId, kind, rtpParameters.toString());
 		Log.d(TAG, "handleNewConsumerEvent() consumer created id=" + kindConsumer.getId() + " kind=" + kindConsumer.getKind());
-	}
+
+		if (kindConsumer.getKind().equals("video")) {
+			VideoTrack videoTrack = (VideoTrack) kindConsumer.getTrack();
+
+			videoTrack.setEnabled(true);
+			videoTrack.addSink(mRemoteVideoView);
+			Log.d(TAG, "Remote video track sink set " + kindConsumer.getId());
+		}
+    }
 }
