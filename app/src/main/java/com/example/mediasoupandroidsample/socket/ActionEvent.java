@@ -25,8 +25,12 @@ public class ActionEvent {
 	public static final String NEW_USER = "newuser";
 	// newconsumer notification
 	public static final String NEW_CONSUMER = "newconsumer";
+	// pause producer
+	public static final String PAUSE_PRODUCER = "pauseProducer";
+	// resume producer
+	public static final String RESUME_PRODUCER = "resumeProducer";
 
-	@StringDef({ OPEN, ROOM_RTP_CAPABILITIES, LOGIN_ROOM, CREATE_WEBRTC_TRANSPORT, CONNECT_WEBRTC_TRANSPORT, PRODUCE, NEW_USER, NEW_CONSUMER })
+	@StringDef({ OPEN, ROOM_RTP_CAPABILITIES, LOGIN_ROOM, CREATE_WEBRTC_TRANSPORT, CONNECT_WEBRTC_TRANSPORT, PRODUCE, NEW_USER, NEW_CONSUMER, PAUSE_PRODUCER, RESUME_PRODUCER })
 	@Retention(RetentionPolicy.SOURCE)
 	public @interface Event {}
 }

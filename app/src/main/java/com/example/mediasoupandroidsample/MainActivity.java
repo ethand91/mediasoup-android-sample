@@ -4,6 +4,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.ImageButton;
+import android.widget.Toast;
 
 import com.example.mediasoupandroidsample.permission.PermissionFragment;
 import com.example.mediasoupandroidsample.request.Request;
@@ -28,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 public class MainActivity extends AppCompatActivity implements MessageObserver.Observer {
     private static final String TAG = "MainActivity";
 
-    private SurfaceViewRenderer mVideoView;
+	private SurfaceViewRenderer mVideoView;
     private SurfaceViewRenderer mRemoteVideoView;
     private PermissionFragment mPermissionFragment;
     private RoomClient mClient;
@@ -41,6 +43,32 @@ public class MainActivity extends AppCompatActivity implements MessageObserver.O
         // Initialize Mediasoup
         mVideoView = findViewById(R.id.local_video_view);
         mRemoteVideoView = findViewById(R.id.remote_video_view);
+	    ImageButton mLocalPauseButton = findViewById(R.id.local_pause_button);
+	    ImageButton mLocalPlayButton = findViewById(R.id.local_play_button);
+
+        mLocalPlayButton.setOnClickListener(view -> {
+			if (mClient != null) {
+				try {
+					mClient.resumeLocalAudio();
+					mClient.resumeLocalVideo();
+					runOnUiThread(() -> Toast.makeText(getBaseContext(), "Local Stream Resumed", Toast.LENGTH_LONG).show());
+				} catch (JSONException je) {
+					Log.e(TAG, "Failed to pause local stream", je);
+				}
+			}
+        });
+
+        mLocalPauseButton.setOnClickListener(view -> {
+	        if (mClient != null) {
+				try {
+					mClient.pauseLocalAudio();
+					mClient.pauseLocalVideo();
+					runOnUiThread(() -> Toast.makeText(getBaseContext(), "Local Stream Paused", Toast.LENGTH_LONG).show());
+				} catch (JSONException je) {
+					Log.e(TAG, "Failed to resume local stream");
+				}
+	        }
+        });
 
 	    EglBase.Context eglBaseContext = EglBase.create().getEglBaseContext();
 	    runOnUiThread(() -> mRemoteVideoView.init(eglBaseContext, null));
@@ -78,14 +106,14 @@ public class MainActivity extends AppCompatActivity implements MessageObserver.O
             // Join the room
 	        mClient.join();
 
+	        // Create recv WebRtcTransport
+	        mClient.createRecvTransport();
+
 	        // Create send WebRtcTransport
 	        mClient.createSendTransport();
 
 	        // Produce local media
 	        displayLocalVideo();
-
-	        // Create recv WebRtcTransport
-	        mClient.createRecvTransport();
         } catch (Exception e) {
             Log.e(TAG, "Failed to connect to socket server error=", e);
         }
@@ -189,7 +217,7 @@ public class MainActivity extends AppCompatActivity implements MessageObserver.O
 			    videoTrack.addSink(mRemoteVideoView);
 		    }
 	    } catch (Exception e) {
-    		Log.e(TAG, "Failed to consume remote track");
+    		Log.e(TAG, "Failed to consume remote track", e);
 	    }
     }
 }

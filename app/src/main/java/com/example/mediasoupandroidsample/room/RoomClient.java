@@ -38,6 +38,8 @@ public class RoomClient {
 	private RecvTransport mRecvTransport;
 	private ConcurrentHashMap<String, Producer> mProducers;
 	private ConcurrentHashMap<String, Consumer> mConsumers;
+	private boolean mLocalVideoPaused;
+	private boolean mLocalAudioPaused;
 
 	public RoomClient(EchoSocket socket, Device device, String roomId) {
 		mSocket = socket;
@@ -47,6 +49,8 @@ public class RoomClient {
 		mConsumers = new ConcurrentHashMap<>();
 		mMediaCapturer = new MediaCapturer();
 		mJoined = false;
+		mLocalVideoPaused = false;
+		mLocalAudioPaused = false;
 	}
 
 	/**
@@ -128,6 +132,38 @@ public class RoomClient {
 	}
 
 	/**
+	 * Pause local video
+	 * @throws JSONException JSON error
+	 */
+	public void pauseLocalVideo()
+	throws JSONException {
+		if (mLocalVideoPaused) {
+			Log.d(TAG, "local video is already paused");
+			return;
+		}
+
+		Producer videoProducer = getProducerByKind("video");
+		Request.sendPauseProducerRequest(mSocket, mRoomId, videoProducer.getId());
+		mLocalVideoPaused = true;
+	}
+
+	/**
+	 * Resume local video
+	 * @throws JSONException JSON error
+	 */
+	public void resumeLocalVideo()
+	throws JSONException {
+		if (!mLocalVideoPaused) {
+			Log.d(TAG, "local video is already resumed");
+			return;
+		}
+
+		Producer videoProducer = getProducerByKind("video");
+		Request.sendResumeProducerRequest(mSocket, mRoomId, videoProducer.getId());
+		mLocalVideoPaused = false;
+	}
+
+	/**
 	 * Start producing Audio
 	 */
 	public void produceAudio() {
@@ -141,6 +177,38 @@ public class RoomClient {
 
 		createProducer(mMediaCapturer.createAudioTrack());
 		Log.d(TAG, "produceAudio() audio produce initialized");
+	}
+
+	/**
+	 * Pause local audio
+	 * @throws JSONException JSON error
+	 */
+	public void pauseLocalAudio()
+	throws JSONException {
+		if (mLocalAudioPaused) {
+			Log.d(TAG, "local audio is already paused");
+			return;
+		}
+
+		Producer audioProducer = getProducerByKind("audio");
+		Request.sendPauseProducerRequest(mSocket, mRoomId, audioProducer.getId());
+		mLocalAudioPaused = true;
+	}
+
+	/**
+	 * Resume local audio
+	 * @throws JSONException JSON error
+	 */
+	public void resumeLocalAudio()
+	throws JSONException {
+		if (!mLocalAudioPaused) {
+			Log.d(TAG, "local audio is already resumed");
+			return;
+		}
+
+		Producer audioProducer = getProducerByKind("audio");
+		Request.sendResumeProducerRequest(mSocket, mRoomId, audioProducer.getId());
+		mLocalAudioPaused = false;
 	}
 
 	/**
@@ -276,5 +344,19 @@ public class RoomClient {
 		Producer kindProducer = mSendTransport.produce(listener, track, null, null);
 		mProducers.put(kindProducer.getId(), kindProducer);
 		Log.d(TAG, "createProducer created id=" + kindProducer.getId() + " kind=" + kindProducer.getKind());
+	}
+
+	/**
+	 * @param kind Producer kind
+	 * @return Producer by kind
+	 */
+	private Producer getProducerByKind(String kind) {
+		for (Producer producer : mProducers.values()) {
+			if (producer.getKind().equals(kind)) {
+				return producer;
+			}
+		}
+
+		throw new IllegalStateException("No " + kind + " Producer");
 	}
 }

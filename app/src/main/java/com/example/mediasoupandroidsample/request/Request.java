@@ -75,4 +75,26 @@ public class Request {
 
 		return socket.sendWithFuture(produceWebRtcTransportRequest).get(Request.REQUEST_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 	}
+
+	// Pause producer
+	public static void sendPauseProducerRequest(EchoSocket socket, String roomId, String producerId)
+	throws JSONException {
+		JSONObject pauseProducerRequest = new JSONObject();
+		pauseProducerRequest.put("action", ActionEvent.PAUSE_PRODUCER);
+		pauseProducerRequest.put("roomId", roomId);
+		pauseProducerRequest.put("producerId", producerId);
+
+		socket.send(pauseProducerRequest);
+	}
+
+	// Resume producer
+	public static void sendResumeProducerRequest(EchoSocket socket, String roomId, String producerId)
+	throws JSONException {
+		JSONObject resumeProducerRequest = new JSONObject();
+		resumeProducerRequest.put("action", ActionEvent.RESUME_PRODUCER);
+		resumeProducerRequest.put("roomId", roomId);
+		resumeProducerRequest.put("producerId", producerId);
+
+		socket.send(resumeProducerRequest);
+	}
 }
