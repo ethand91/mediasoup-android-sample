@@ -40,6 +40,8 @@ public class RoomClient {
 	private ConcurrentHashMap<String, Consumer> mConsumers;
 	private boolean mLocalVideoPaused;
 	private boolean mLocalAudioPaused;
+	private boolean mRemoteVideoPaused;
+	private boolean mRemoteAudioPaused;
 
 	public RoomClient(EchoSocket socket, Device device, String roomId) {
 		mSocket = socket;
@@ -51,6 +53,8 @@ public class RoomClient {
 		mJoined = false;
 		mLocalVideoPaused = false;
 		mLocalAudioPaused = false;
+		mRemoteAudioPaused = false;
+		mRemoteVideoPaused = false;
 	}
 
 	/**
@@ -238,6 +242,70 @@ public class RoomClient {
 	}
 
 	/**
+	 * Pause remote video
+	 * @throws JSONException JSON error
+	 */
+	public void pauseRemoteVideo()
+	throws JSONException {
+		if (mRemoteVideoPaused) {
+			Log.d(TAG, "remote video is already paused");
+			return;
+		}
+
+		Consumer videoConsumer = getConsumerByKind("video");
+		Request.sendPauseConsumerRequest(mSocket, mRoomId, videoConsumer.getId());
+		mRemoteVideoPaused = true;
+	}
+
+	/**
+	 * Resume remote video
+	 * @throws JSONException JSON error
+	 */
+	public void resumeRemoteVideo()
+	throws JSONException {
+		if (!mRemoteVideoPaused) {
+			Log.d(TAG, "remote video is already resumed");
+			return;
+		}
+
+		Consumer videoConsumer = getConsumerByKind("video");
+		Request.sendResumeConsumerRequest(mSocket, mRoomId, videoConsumer.getId());
+		mRemoteVideoPaused = false;
+	}
+
+	/**
+	 * Pause remote audio
+	 * @throws JSONException JSON error
+	 */
+	public void pauseRemoteAudio()
+	throws JSONException {
+		if (mRemoteAudioPaused) {
+			Log.d(TAG, "remote audio is already paused");
+			return;
+		}
+
+		Consumer audioConsumer = getConsumerByKind("audio");
+		Request.sendPauseConsumerRequest(mSocket, mRoomId, audioConsumer.getId());
+		mRemoteAudioPaused = true;
+	}
+
+	/**
+	 * Resume remote audio
+	 * @throws JSONException JSON error
+	 */
+	public void resumeRemoteAudio()
+	throws JSONException {
+		if (!mRemoteAudioPaused) {
+			Log.d(TAG, "remote audio is already resumed");
+			return;
+		}
+
+		Consumer audioConsumer = getConsumerByKind("audio");
+		Request.sendResumeConsumerRequest(mSocket, mRoomId, audioConsumer.getId());
+		mRemoteAudioPaused = false;
+	}
+
+	/**
 	 * Create local WebRtcTransport
 	 * @param direction send/recv
 	 * @throws Exception Create transport request failed
@@ -358,5 +426,15 @@ public class RoomClient {
 		}
 
 		throw new IllegalStateException("No " + kind + " Producer");
+	}
+
+	private Consumer getConsumerByKind(String kind) {
+		for (Consumer consumer : mConsumers.values()) {
+			if (consumer.getKind().equals(kind)) {
+				return consumer;
+			}
+		}
+
+		throw new IllegalStateException("No " + kind + " Consumer");
 	}
 }

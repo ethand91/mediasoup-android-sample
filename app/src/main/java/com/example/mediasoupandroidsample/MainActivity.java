@@ -43,32 +43,62 @@ public class MainActivity extends AppCompatActivity implements MessageObserver.O
         // Initialize Mediasoup
         mVideoView = findViewById(R.id.local_video_view);
         mRemoteVideoView = findViewById(R.id.remote_video_view);
-	    ImageButton mLocalPauseButton = findViewById(R.id.local_pause_button);
-	    ImageButton mLocalPlayButton = findViewById(R.id.local_play_button);
+	    ImageButton localPauseButton = findViewById(R.id.local_pause_button);
+	    ImageButton localPlayButton = findViewById(R.id.local_play_button);
+	    ImageButton remotePauseButton = findViewById(R.id.remote_pause_button);
+	    ImageButton remotePlayButton = findViewById(R.id.remote_play_button);
 
-        mLocalPlayButton.setOnClickListener(view -> {
+	    // local play button
+        localPlayButton.setOnClickListener(view -> {
 			if (mClient != null) {
 				try {
 					mClient.resumeLocalAudio();
 					mClient.resumeLocalVideo();
 					runOnUiThread(() -> Toast.makeText(getBaseContext(), "Local Stream Resumed", Toast.LENGTH_LONG).show());
-				} catch (JSONException je) {
-					Log.e(TAG, "Failed to pause local stream", je);
+				} catch (Exception e) {
+					Log.e(TAG, "Failed to pause local stream", e);
 				}
 			}
         });
 
-        mLocalPauseButton.setOnClickListener(view -> {
+        // local pause button
+        localPauseButton.setOnClickListener(view -> {
 	        if (mClient != null) {
 				try {
 					mClient.pauseLocalAudio();
 					mClient.pauseLocalVideo();
 					runOnUiThread(() -> Toast.makeText(getBaseContext(), "Local Stream Paused", Toast.LENGTH_LONG).show());
-				} catch (JSONException je) {
-					Log.e(TAG, "Failed to resume local stream");
+				} catch (Exception e) {
+					Log.e(TAG, "Failed to resume local stream", e);
 				}
 	        }
         });
+
+        // remote play button
+	    remotePlayButton.setOnClickListener(view -> {
+	    	if (mClient != null) {
+	    		try {
+	    			mClient.resumeRemoteAudio();
+	    			mClient.resumeRemoteVideo();
+	    			runOnUiThread(() -> Toast.makeText(getBaseContext(), "Remote Stream Resumed", Toast.LENGTH_LONG).show());
+			    } catch (Exception e) {
+	    			Log.e(TAG, "Failed to resume remote stream", e);
+			    }
+		    }
+	    });
+
+	    // remote pause button
+	    remotePauseButton.setOnClickListener(view -> {
+	    	if (mClient != null) {
+	    		try {
+	    			mClient.pauseRemoteAudio();
+	    			mClient.pauseRemoteVideo();
+	    			runOnUiThread(() -> Toast.makeText(getBaseContext(), "Remote Stream Paused", Toast.LENGTH_LONG).show());
+			    } catch (Exception e) {
+	    			Log.e(TAG, "Failed to pause remote stream", e);
+			    }
+		    }
+	    });
 
 	    EglBase.Context eglBaseContext = EglBase.create().getEglBaseContext();
 	    runOnUiThread(() -> mRemoteVideoView.init(eglBaseContext, null));

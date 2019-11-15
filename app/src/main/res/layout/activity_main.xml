@@ -18,8 +18,8 @@
         />
 
     <LinearLayout
-        android:layout_width="100dp"
-        android:layout_height="150dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:gravity="bottom"
         android:layout_alignParentBottom="true"
         android:layout_alignParentStart="true"
@@ -48,6 +48,43 @@
             android:src="@drawable/ic_play_circle_filled_white_red_500_48dp"
             android:background="@android:color/transparent"
             android:contentDescription="@string/play_button_content_description"
+            />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentEnd="true"
+        android:gravity="bottom"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Remote Settings"
+            android:textColor="@color/colorAccent"
+            android:layout_gravity="end"
+            />
+
+        <ImageButton
+            android:id="@+id/remote_pause_button"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@drawable/ic_pause_circle_filled_red_500_48dp"
+            android:background="@android:color/transparent"
+            android:contentDescription="@string/play_button_content_description"
+            android:layout_gravity="end"
+            />
+
+        <ImageButton
+            android:id="@+id/remote_play_button"
+            android:layout_height="48dp"
+            android:layout_width="48dp"
+            android:src="@drawable/ic_play_circle_filled_white_red_500_48dp"
+            android:background="@android:color/transparent"
+            android:contentDescription="@string/play_button_content_description"
+            android:layout_gravity="end"
             />
     </LinearLayout>
 </RelativeLayout>

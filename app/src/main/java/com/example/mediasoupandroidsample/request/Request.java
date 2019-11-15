@@ -97,4 +97,26 @@ public class Request {
 
 		socket.send(resumeProducerRequest);
 	}
+
+	// pause consumer
+	public static void sendPauseConsumerRequest(EchoSocket socket, String roomId, String consumerId)
+	throws JSONException {
+		JSONObject pauseConsumerRequest = new JSONObject();
+		pauseConsumerRequest.put("action", ActionEvent.PAUSE_CONSUMER);
+		pauseConsumerRequest.put("roomId", roomId);
+		pauseConsumerRequest.put("consumerId", consumerId);
+
+		socket.send(pauseConsumerRequest);
+	}
+
+	// resume consumer
+	public static void sendResumeConsumerRequest(EchoSocket socket, String roomId, String consumerId)
+	throws JSONException {
+		JSONObject resumeConsumerRequest = new JSONObject();
+		resumeConsumerRequest.put("action", ActionEvent.RESUME_CONSUMER);
+		resumeConsumerRequest.put("roomId", roomId);
+		resumeConsumerRequest.put("consumerId", consumerId);
+
+		socket.send(resumeConsumerRequest);
+	}
 }
