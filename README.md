@@ -22,6 +22,7 @@ The SDK is included (built for archs x86 and arm64)
 - WebRtcTransport Connection - DONE
 - Produce - DONE
 - Consume - DONE
-- Producer Pause/Resume
+- Producer Pause/Resume - DONE
 - Consumer Pause/Resume
 - Simulcast
+- getStats
