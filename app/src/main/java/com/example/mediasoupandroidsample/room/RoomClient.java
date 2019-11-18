@@ -19,9 +19,13 @@ import org.mediasoup.droid.SendTransport;
 import org.mediasoup.droid.Transport;
 import org.webrtc.EglBase;
 import org.webrtc.MediaStreamTrack;
+import org.webrtc.RTCUtils;
+import org.webrtc.RtpParameters;
 import org.webrtc.SurfaceViewRenderer;
 import org.webrtc.VideoTrack;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -132,7 +136,13 @@ public class RoomClient {
 
 		mMediaCapturer.initCamera(context);
 		VideoTrack videoTrack = mMediaCapturer.createVideoTrack(context, localVideoView, eglContext);
-		createProducer(videoTrack);
+
+		String codecOptions = "[{\"videoGoogleStartBitrate\":1000}]";
+		List<RtpParameters.Encoding> encodings = new ArrayList<>();
+		encodings.add(RTCUtils.genRtpEncodingParameters(false, 500000, 0, 60, 0, 0.0d, 0L));
+		encodings.add(RTCUtils.genRtpEncodingParameters(false, 1000000, 0, 60, 0, 0.0d, 0L));
+		encodings.add(RTCUtils.genRtpEncodingParameters(false, 1500000, 0, 60, 0, 0.0d, 0L));
+		createProducer(videoTrack, codecOptions, encodings);
 		Log.d(TAG, "produceVideo() video produce initialized");
 
 		return videoTrack;
@@ -182,7 +192,8 @@ public class RoomClient {
 			throw new IllegalStateException("Device cannot produce audio");
 		}
 
-		createProducer(mMediaCapturer.createAudioTrack());
+		String codecOptions = "[{\"opusStereo\":true},{\"opusDtx\":true}]";
+		createProducer(mMediaCapturer.createAudioTrack(), codecOptions, null);
 		Log.d(TAG, "produceAudio() audio produce initialized");
 	}
 
@@ -443,10 +454,10 @@ public class RoomClient {
 	/**
 	 * Create local Producer
 	 */
-	private void createProducer(MediaStreamTrack track) {
+	private void createProducer(MediaStreamTrack track, String codecOptions, List<RtpParameters.Encoding> encodings) {
 		final Producer.Listener listener = producer -> Log.d(TAG, "producer::onTransportClose kind=" + track.kind());
 
-		Producer kindProducer = mSendTransport.produce(listener, track, null, null);
+		Producer kindProducer = mSendTransport.produce(listener, track, encodings, codecOptions);
 		mProducers.put(kindProducer.getId(), kindProducer);
 		Log.d(TAG, "createProducer created id=" + kindProducer.getId() + " kind=" + kindProducer.getKind());
 
