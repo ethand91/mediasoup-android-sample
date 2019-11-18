@@ -25,4 +25,4 @@ The SDK is included (built for archs x86 and arm64)
 - Producer Pause/Resume - DONE
 - Consumer Pause/Resume - DONE
 - Simulcast
-- getStats
+- getStats - DONE
