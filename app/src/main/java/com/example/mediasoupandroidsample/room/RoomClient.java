@@ -1,6 +1,8 @@
 package com.example.mediasoupandroidsample.room;
 
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import com.example.mediasoupandroidsample.media.MediaCapturer;
@@ -26,6 +28,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Mediasoup room client
  */
 public class RoomClient {
+	private static final int STATS_INTERVAL_MS = 3000;
 	private static final String TAG = "RoomClient";
 
 	private final EchoSocket mSocket;
@@ -238,6 +241,23 @@ public class RoomClient {
 		mConsumers.put(kindConsumer.getId(), kindConsumer);
 		Log.d(TAG, "consumerTrack() consuming id=" + kindConsumer.getId());
 
+		// Consumer RTC Stats
+		final Handler consumerStatsHandler = new Handler(Looper.getMainLooper());
+		final Runnable consumerStatsRunnable = new Runnable() {
+			@Override
+			public void run() {
+				try {
+					Request.sendRTCStatsReport(mSocket, mRoomId, kindConsumer.getStats());
+				} catch (Exception e) {
+					Log.e(TAG, "Failed to get consumer stats", e);
+				} finally {
+					consumerStatsHandler.postDelayed(this,STATS_INTERVAL_MS);
+				}
+			}
+		};
+
+		consumerStatsHandler.post(consumerStatsRunnable);
+
 		return kindConsumer;
 	}
 
@@ -385,6 +405,23 @@ public class RoomClient {
 	private void handleLocalTransportConnectEvent(Transport transport, String dtlsParameters) {
 		try {
 			Request.sendConnectWebRtcTransportRequest(mSocket, mRoomId, transport.getId(), dtlsParameters);
+
+			// Transport Stats
+			final Handler transportStatsHandler = new Handler(Looper.getMainLooper());
+			final Runnable transportStatsRunnable = new Runnable() {
+				@Override
+				public void run() {
+					try {
+						Request.sendRTCStatsReport(mSocket, mRoomId, transport.getStats());
+					} catch (Exception e) {
+						Log.e(TAG, "Failed to get transport stats");
+					} finally {
+						transportStatsHandler.postDelayed(this, STATS_INTERVAL_MS);
+					}
+				}
+			};
+
+			transportStatsHandler.post(transportStatsRunnable);
 		} catch (Exception e) {
 			Log.e(TAG, "transport::onConnect failed", e);
 		}
@@ -412,6 +449,26 @@ public class RoomClient {
 		Producer kindProducer = mSendTransport.produce(listener, track, null, null);
 		mProducers.put(kindProducer.getId(), kindProducer);
 		Log.d(TAG, "createProducer created id=" + kindProducer.getId() + " kind=" + kindProducer.getKind());
+
+		// Periodically get RTC Stats
+		final Handler producerStatsHandler = new Handler(Looper.getMainLooper());
+		final Runnable producerStatsRunnable = new Runnable() {
+			@Override
+			public void run() {
+				try {
+					Request.sendRTCStatsReport(mSocket, mRoomId, kindProducer.getStats());
+				} catch (Exception e) {
+					Log.e(TAG, "Failed to get producer stats", e);
+				} finally {
+					if (!kindProducer.isClosed()) {
+						producerStatsHandler.postDelayed(this, STATS_INTERVAL_MS);
+					}
+				}
+			}
+		};
+
+		Log.d(TAG, "Producer stats start");
+		producerStatsHandler.post(producerStatsRunnable);
 	}
 
 	/**

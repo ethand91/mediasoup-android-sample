@@ -119,4 +119,15 @@ public class Request {
 
 		socket.send(resumeConsumerRequest);
 	}
+
+	// RTC Stats
+	public static void sendRTCStatsReport(EchoSocket socket, String roomId, String rtcStatsReport)
+	throws JSONException {
+		JSONObject rtcStatsReportRequest = new JSONObject();
+		rtcStatsReportRequest.put("action", ActionEvent.RTC_STATS);
+		rtcStatsReportRequest.put("roomId", roomId);
+		rtcStatsReportRequest.put("rtcStatsReport", rtcStatsReport);
+
+		socket.send(rtcStatsReportRequest);
+	}
 }
