@@ -38,25 +38,29 @@ public class RoomClient {
 	private final EchoSocket mSocket;
 	private final String mRoomId;
 	private final MediaCapturer mMediaCapturer;
+	private final ConcurrentHashMap<String, Producer> mProducers;
+	private final ConcurrentHashMap<String, Consumer> mConsumers;
+	private final List<JSONObject> mConsumersInfo;
+	private final Device mDevice;
+	private final RoomListener mListener;
 
-	private Device mDevice;
 	private Boolean mJoined;
 	private SendTransport mSendTransport;
 	private RecvTransport mRecvTransport;
-	private ConcurrentHashMap<String, Producer> mProducers;
-	private ConcurrentHashMap<String, Consumer> mConsumers;
 	private boolean mLocalVideoPaused;
 	private boolean mLocalAudioPaused;
 	private boolean mRemoteVideoPaused;
 	private boolean mRemoteAudioPaused;
 
-	public RoomClient(EchoSocket socket, Device device, String roomId) {
+	public RoomClient(EchoSocket socket, Device device, String roomId, RoomListener listener) {
 		mSocket = socket;
 		mRoomId = roomId;
 		mDevice = device;
 		mProducers = new ConcurrentHashMap<>();
 		mConsumers = new ConcurrentHashMap<>();
 		mMediaCapturer = new MediaCapturer();
+		mConsumersInfo = new ArrayList<>();
+		mListener = listener;
 		mJoined = false;
 		mLocalVideoPaused = false;
 		mLocalAudioPaused = false;
@@ -232,13 +236,15 @@ public class RoomClient {
 	/**
 	 * Start consuming remote consumer
 	 * @param consumerInfo Consumer Info
-	 * @return Consumer
 	 * @throws JSONException Failed to parse consumer info
 	 */
-	public Consumer consumeTrack(JSONObject consumerInfo)
+	public void consumeTrack(JSONObject consumerInfo)
 	throws JSONException  {
 		if (mRecvTransport == null) {
-			throw new IllegalStateException("Recv Transport not created");
+			// User has not yet created a transport for receiving so temporarily store it
+			// and play it when the recv transport is created
+			mConsumersInfo.add(consumerInfo);
+			return;
 		}
 
 		String id = consumerInfo.getString("id");
@@ -251,6 +257,7 @@ public class RoomClient {
 		Consumer kindConsumer = mRecvTransport.consume(listener, id, producerId, kind, rtpParameters);
 		mConsumers.put(kindConsumer.getId(), kindConsumer);
 		Log.d(TAG, "consumerTrack() consuming id=" + kindConsumer.getId());
+		mListener.onNewConsumer(kindConsumer);
 
 		// Consumer RTC Stats
 		final Handler consumerStatsHandler = new Handler(Looper.getMainLooper());
@@ -268,8 +275,6 @@ public class RoomClient {
 		};
 
 		consumerStatsHandler.post(consumerStatsRunnable);
-
-		return kindConsumer;
 	}
 
 	/**
@@ -392,7 +397,8 @@ public class RoomClient {
 	/**
 	 * Create local recv WebRtcTransport
 	 */
-	private void createLocalWebRtcRecvTransport(String id, String remoteIceParameters, String remoteIceCandidatesArray, String remoteDtlsParameters) {
+	private void createLocalWebRtcRecvTransport(String id, String remoteIceParameters, String remoteIceCandidatesArray, String remoteDtlsParameters)
+	throws JSONException {
 		final RecvTransport.Listener listener = new RecvTransport.Listener() {
 			@Override
 			public void onConnect(Transport transport, String dtlsParameters) {
@@ -408,6 +414,11 @@ public class RoomClient {
 
 		mRecvTransport = mDevice.createRecvTransport(listener, id, remoteIceParameters, remoteIceCandidatesArray, remoteDtlsParameters);
 		Log.d(TAG, "Recv Transport Created id=" + mRecvTransport.getId());
+
+		// Recv Transport created, consume any pending consumers
+		for (JSONObject consumerInfo : mConsumersInfo) {
+			consumeTrack(consumerInfo);
+		}
 	}
 
 	/**

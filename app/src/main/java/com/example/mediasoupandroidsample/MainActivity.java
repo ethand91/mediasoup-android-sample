@@ -10,6 +10,7 @@ import android.widget.Toast;
 import com.example.mediasoupandroidsample.permission.PermissionFragment;
 import com.example.mediasoupandroidsample.request.Request;
 import com.example.mediasoupandroidsample.room.RoomClient;
+import com.example.mediasoupandroidsample.room.RoomListener;
 import com.example.mediasoupandroidsample.socket.ActionEvent;
 import com.example.mediasoupandroidsample.socket.EchoSocket;
 import com.example.mediasoupandroidsample.socket.MessageObserver;
@@ -27,7 +28,7 @@ import org.webrtc.VideoTrack;
 
 import java.util.concurrent.TimeUnit;
 
-public class MainActivity extends AppCompatActivity implements MessageObserver.Observer {
+public class MainActivity extends AppCompatActivity implements MessageObserver.Observer, RoomListener {
     private static final String TAG = "MainActivity";
 
 	private SurfaceViewRenderer mVideoView;
@@ -131,7 +132,7 @@ public class MainActivity extends AppCompatActivity implements MessageObserver.O
             device.load(roomRtpCapabilities.toString());
 
             // Create a new room client
-            mClient = new RoomClient(socket, device, "android");
+            mClient = new RoomClient(socket, device, "android", this);
 
             // Join the room
 	        mClient.join();
@@ -238,16 +239,19 @@ public class MainActivity extends AppCompatActivity implements MessageObserver.O
 	 */
 	private void handleNewConsumerEvent(JSONObject consumerInfo) {
     	try {
-		    Consumer kindConsumer = mClient.consumeTrack(consumerInfo);
-
-		    // If the remote consumer is video attach to the remote video renderer
-		    if (kindConsumer.getKind().equals("video")) {
-			    VideoTrack videoTrack = (VideoTrack) kindConsumer.getTrack();
-			    videoTrack.setEnabled(true);
-			    videoTrack.addSink(mRemoteVideoView);
-		    }
+		    mClient.consumeTrack(consumerInfo);
 	    } catch (Exception e) {
     		Log.e(TAG, "Failed to consume remote track", e);
 	    }
     }
+
+	@Override
+	public void onNewConsumer(Consumer consumer) {
+		// If the remote consumer is video attach to the remote video renderer
+		if (consumer != null && consumer.getKind().equals("video")) {
+			VideoTrack videoTrack = (VideoTrack) consumer.getTrack();
+			videoTrack.setEnabled(true);
+			videoTrack.addSink(mRemoteVideoView);
+		}
+	}
 }
