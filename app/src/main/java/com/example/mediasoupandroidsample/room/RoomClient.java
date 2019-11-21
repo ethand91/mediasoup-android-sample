@@ -47,10 +47,6 @@ public class RoomClient {
 	private Boolean mJoined;
 	private SendTransport mSendTransport;
 	private RecvTransport mRecvTransport;
-	private boolean mLocalVideoPaused;
-	private boolean mLocalAudioPaused;
-	private boolean mRemoteVideoPaused;
-	private boolean mRemoteAudioPaused;
 
 	public RoomClient(EchoSocket socket, Device device, String roomId, RoomListener listener) {
 		mSocket = socket;
@@ -62,10 +58,6 @@ public class RoomClient {
 		mConsumersInfo = new ArrayList<>();
 		mListener = listener;
 		mJoined = false;
-		mLocalVideoPaused = false;
-		mLocalAudioPaused = false;
-		mRemoteAudioPaused = false;
-		mRemoteVideoPaused = false;
 	}
 
 	/**
@@ -158,14 +150,8 @@ public class RoomClient {
 	 */
 	public void pauseLocalVideo()
 	throws JSONException {
-		if (mLocalVideoPaused) {
-			Log.d(TAG, "local video is already paused");
-			return;
-		}
-
 		Producer videoProducer = getProducerByKind("video");
 		Request.sendPauseProducerRequest(mSocket, mRoomId, videoProducer.getId());
-		mLocalVideoPaused = true;
 	}
 
 	/**
@@ -174,14 +160,8 @@ public class RoomClient {
 	 */
 	public void resumeLocalVideo()
 	throws JSONException {
-		if (!mLocalVideoPaused) {
-			Log.d(TAG, "local video is already resumed");
-			return;
-		}
-
 		Producer videoProducer = getProducerByKind("video");
 		Request.sendResumeProducerRequest(mSocket, mRoomId, videoProducer.getId());
-		mLocalVideoPaused = false;
 	}
 
 	/**
@@ -207,14 +187,8 @@ public class RoomClient {
 	 */
 	public void pauseLocalAudio()
 	throws JSONException {
-		if (mLocalAudioPaused) {
-			Log.d(TAG, "local audio is already paused");
-			return;
-		}
-
 		Producer audioProducer = getProducerByKind("audio");
 		Request.sendPauseProducerRequest(mSocket, mRoomId, audioProducer.getId());
-		mLocalAudioPaused = true;
 	}
 
 	/**
@@ -223,14 +197,8 @@ public class RoomClient {
 	 */
 	public void resumeLocalAudio()
 	throws JSONException {
-		if (!mLocalAudioPaused) {
-			Log.d(TAG, "local audio is already resumed");
-			return;
-		}
-
 		Producer audioProducer = getProducerByKind("audio");
 		Request.sendResumeProducerRequest(mSocket, mRoomId, audioProducer.getId());
-		mLocalAudioPaused = false;
 	}
 
 	/**
@@ -243,14 +211,23 @@ public class RoomClient {
 		if (mRecvTransport == null) {
 			// User has not yet created a transport for receiving so temporarily store it
 			// and play it when the recv transport is created
+			//mConsumersInfo.add(consumerInfo);
 			mConsumersInfo.add(consumerInfo);
 			return;
 		}
 
-		String id = consumerInfo.getString("id");
-		String producerId = consumerInfo.getString("producerId");
-		String kind = consumerInfo.getString("kind");
-		String rtpParameters = consumerInfo.getJSONObject("rtpParameters").toString();
+		final String kind = consumerInfo.getString("kind");
+		// If already consuming type of track remove it, TODO: support multiple remotes?
+		for (Consumer consumer : mConsumers.values()) {
+			if (consumer.getKind().equals(kind)) {
+				Log.d(TAG, "Removing previous consumer of kind " + consumer.getKind());
+				mConsumers.remove(consumer.getId());
+			}
+		}
+
+		final String id = consumerInfo.getString("id");
+		final String producerId = consumerInfo.getString("producerId");
+		final String rtpParameters = consumerInfo.getJSONObject("rtpParameters").toString();
 
 		final Consumer.Listener listener = consumer -> Log.d(TAG, "consumer::onTransportClose");
 
@@ -283,14 +260,8 @@ public class RoomClient {
 	 */
 	public void pauseRemoteVideo()
 	throws JSONException {
-		if (mRemoteVideoPaused) {
-			Log.d(TAG, "remote video is already paused");
-			return;
-		}
-
 		Consumer videoConsumer = getConsumerByKind("video");
 		Request.sendPauseConsumerRequest(mSocket, mRoomId, videoConsumer.getId());
-		mRemoteVideoPaused = true;
 	}
 
 	/**
@@ -299,14 +270,8 @@ public class RoomClient {
 	 */
 	public void resumeRemoteVideo()
 	throws JSONException {
-		if (!mRemoteVideoPaused) {
-			Log.d(TAG, "remote video is already resumed");
-			return;
-		}
-
 		Consumer videoConsumer = getConsumerByKind("video");
 		Request.sendResumeConsumerRequest(mSocket, mRoomId, videoConsumer.getId());
-		mRemoteVideoPaused = false;
 	}
 
 	/**
@@ -315,14 +280,8 @@ public class RoomClient {
 	 */
 	public void pauseRemoteAudio()
 	throws JSONException {
-		if (mRemoteAudioPaused) {
-			Log.d(TAG, "remote audio is already paused");
-			return;
-		}
-
 		Consumer audioConsumer = getConsumerByKind("audio");
 		Request.sendPauseConsumerRequest(mSocket, mRoomId, audioConsumer.getId());
-		mRemoteAudioPaused = true;
 	}
 
 	/**
@@ -331,14 +290,8 @@ public class RoomClient {
 	 */
 	public void resumeRemoteAudio()
 	throws JSONException {
-		if (!mRemoteAudioPaused) {
-			Log.d(TAG, "remote audio is already resumed");
-			return;
-		}
-
 		Consumer audioConsumer = getConsumerByKind("audio");
 		Request.sendResumeConsumerRequest(mSocket, mRoomId, audioConsumer.getId());
-		mRemoteAudioPaused = false;
 	}
 
 	/**

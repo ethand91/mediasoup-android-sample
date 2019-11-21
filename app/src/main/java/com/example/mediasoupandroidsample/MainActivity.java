@@ -239,6 +239,7 @@ public class MainActivity extends AppCompatActivity implements MessageObserver.O
 	 */
 	private void handleNewConsumerEvent(JSONObject consumerInfo) {
     	try {
+    		Log.d(TAG, "handleNewConsumerEvent info =" + consumerInfo);
 		    mClient.consumeTrack(consumerInfo);
 	    } catch (Exception e) {
     		Log.e(TAG, "Failed to consume remote track", e);
@@ -252,6 +253,16 @@ public class MainActivity extends AppCompatActivity implements MessageObserver.O
 			VideoTrack videoTrack = (VideoTrack) consumer.getTrack();
 			videoTrack.setEnabled(true);
 			videoTrack.addSink(mRemoteVideoView);
+		}
+
+		try {
+			// Resume the remote consumer
+			if (consumer.getKind().equals("video"))
+				mClient.resumeRemoteVideo();
+			else if (consumer.getKind().equals("audio"))
+				mClient.resumeRemoteAudio();
+		} catch (JSONException je) {
+			Log.e(TAG, "Failed to send resume consumer request", je);
 		}
 	}
 }
