@@ -12,6 +12,9 @@ This requires the below SDK:
 
 The SDK is included (built for archs x86 and arm64)
 
+The server side used for this project is located below:
+https://github.com/ethand91/mediasoup-sample-server
+
 ---
 
 ### TODO
