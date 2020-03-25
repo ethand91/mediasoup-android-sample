@@ -13,6 +13,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.mediasoup.droid.Consumer;
 import org.mediasoup.droid.Device;
+import org.mediasoup.droid.MediasoupException;
 import org.mediasoup.droid.Producer;
 import org.mediasoup.droid.RecvTransport;
 import org.mediasoup.droid.SendTransport;
@@ -166,8 +167,10 @@ public class RoomClient {
 
 	/**
 	 * Start producing Audio
+	 * @throws MediasoupException Failed to produce audio
 	 */
-	public void produceAudio() {
+	public void produceAudio()
+	throws MediasoupException {
 		if (mSendTransport == null) {
 			throw new IllegalStateException("Send Transport not created");
 		}
@@ -205,9 +208,10 @@ public class RoomClient {
 	 * Start consuming remote consumer
 	 * @param consumerInfo Consumer Info
 	 * @throws JSONException Failed to parse consumer info
+	 * @throws MediasoupException Failed to consume track
 	 */
 	public void consumeTrack(JSONObject consumerInfo)
-	throws JSONException  {
+	throws JSONException, MediasoupException  {
 		if (mRecvTransport == null) {
 			// User has not yet created a transport for receiving so temporarily store it
 			// and play it when the recv transport is created
@@ -322,8 +326,10 @@ public class RoomClient {
 
 	/**
 	 * Create local send WebRtcTransport
+	 * @throws MediasoupException Failed to create local send transport
 	 */
-	private void createLocalWebRtcSendTransport(String id, String remoteIceParameters, String remoteIceCandidatesArray, String remoteDtlsParameters) {
+	private void createLocalWebRtcSendTransport(String id, String remoteIceParameters, String remoteIceCandidatesArray, String remoteDtlsParameters)
+	throws MediasoupException {
 		final SendTransport.Listener listener = new SendTransport.Listener() {
 			@Override
 			public void onConnect(Transport transport, String dtlsParameters) {
@@ -349,9 +355,11 @@ public class RoomClient {
 
 	/**
 	 * Create local recv WebRtcTransport
+	 * @throws JSONException JSON Error
+	 * @throws MediasoupException Failed to create local recv transport
 	 */
 	private void createLocalWebRtcRecvTransport(String id, String remoteIceParameters, String remoteIceCandidatesArray, String remoteDtlsParameters)
-	throws JSONException {
+	throws JSONException, MediasoupException {
 		final RecvTransport.Listener listener = new RecvTransport.Listener() {
 			@Override
 			public void onConnect(Transport transport, String dtlsParameters) {
@@ -417,8 +425,10 @@ public class RoomClient {
 
 	/**
 	 * Create local Producer
+	 * @throws MediasoupException Failed to create producer
 	 */
-	private void createProducer(MediaStreamTrack track, String codecOptions, List<RtpParameters.Encoding> encodings) {
+	private void createProducer(MediaStreamTrack track, String codecOptions, List<RtpParameters.Encoding> encodings)
+	throws MediasoupException {
 		final Producer.Listener listener = producer -> Log.d(TAG, "producer::onTransportClose kind=" + track.kind());
 
 		Producer kindProducer = mSendTransport.produce(listener, track, encodings, codecOptions);

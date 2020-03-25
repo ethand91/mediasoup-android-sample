@@ -31,8 +31,8 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    // Mediasoup Android AAR
-    implementation project(":mediasoup-client-debug")
+    // mediasoup-android-client
+    implementation 'org.mediasoup.droid:mediasoup-client:3.0.4-beta-1'
 
     // OkHttp
     implementation 'com.squareup.okhttp3:okhttp:3.12.0'

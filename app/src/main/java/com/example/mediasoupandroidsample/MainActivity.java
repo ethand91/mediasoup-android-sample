@@ -118,7 +118,7 @@ public class MainActivity extends AppCompatActivity implements MessageObserver.O
 
         try {
             // Connect to server
-            socket.connect("wss://192.168.60.99:443").get(3000, TimeUnit.SECONDS);
+            socket.connect(getString(R.string.server_socket_url)).get(3000, TimeUnit.SECONDS);
 
             // Initialize mediasoup client
             initializeMediasoupClient();

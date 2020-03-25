@@ -1,6 +1,9 @@
 <resources>
     <string name="app_name">Mediasoup AndroidSample</string>
 
+    <!-- Env -->
+    <string name="server_socket_url">wss://192.168.60.99</string>
+
     <!-- for Buttons -->
     <string name="play_button_content_description">Play Track</string>
     <string name="pause_button_content_description">Pause Track</string>

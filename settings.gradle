@@ -1,2 +1,2 @@
-include ':app', ':mediasoup-client-debug'
+include ':app'
 rootProject.name='Mediasoup AndroidSample'
